@@ -60,6 +60,19 @@ html, body {
 }
 #splat-canvas:active { cursor: grabbing; }
 
+/* Apply grab cursor to full viewport when 3D view is active */
+body.viewer-active {
+  cursor: grab;
+}
+body.viewer-active:active {
+  cursor: grabbing;
+}
+body.viewer-active #header,
+body.viewer-active #footer,
+body.viewer-active .panel {
+  cursor: default;
+}
+
 /* ── Header ──────────────────────────────────────────────── */
 #header {
   position: fixed;
@@ -222,6 +235,8 @@ html, body {
   bottom: 90px; right: 24px;
   width: 238px;
 }
+
+/* ── Performance Panel — right side, above controls ─────── */
 
 .control-row {
   display: flex;
@@ -651,7 +666,11 @@ html, body {
 .sort-badge { font-family:var(--font-mono); font-size:11px; font-weight:600; color:var(--clr-wso2-orange); min-width:60px; }
 
 /* ── Performance panel ───────────────────────────────────── */
-#perf-panel { bottom: 90px; left: 50%; transform: translateX(-50%); width: 260px; }
+#perf-panel {
+  right: 24px;
+  width: 238px;
+  /* dynamically positioned via JS below controls panel */
+}
 
 .perf-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
 

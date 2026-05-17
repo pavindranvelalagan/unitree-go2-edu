@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WSO2 · 3D Gaussian Splat Viewer</title>
+  <meta name="description" content="Professional 3D Gaussian Splatting viewer for WSO2 research projects. Supports Mars Rover and Office .ply scene files. Evaluation & Visualisation Lead: Suthail." />
+  <meta name="author" content="WSO2 — Suthail" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- ── Background grid ───────────────────────────────────── -->
+<div id="bg-grid"></div>
+
+<!-- ── Canvas ────────────────────────────────────────────── -->
+<canvas id="splat-canvas"></canvas>
+
+<!-- ── Hidden file input ─────────────────────────────────── -->
+<input id="file-input" type="file" accept=".ply" style="display:none" />
+
+<!-- ── WebGL warning ─────────────────────────────────────── -->
+<div id="webgl-warning">
+  ⚠ WebGL is not available in your browser. Please enable hardware acceleration.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     HEADER
+════════════════════════════════════════════════════════════ -->
+<header id="header" role="banner">
+  <!-- Logo -->
+  <a href="#" class="header-logo" aria-label="WSO2 Home">
+    <div class="header-logo-badge" aria-hidden="true">W2</div>
+    <div class="header-title-group">
+      <span class="header-title">WSO2 Research</span>
+      <span class="header-subtitle">3DGS Visualisation Platform</span>
+    </div>
+  </a>
+
+  <div class="header-divider" aria-hidden="true"></div>
+  <span class="header-viewer-name">Gaussian Splat Viewer</span>
+
+  <div class="header-spacer"></div>
+
+  <!-- Status indicator -->
+  <div class="header-status" role="status" aria-live="polite">
+    <div id="status-dot" class="status-dot"></div>
+    <span id="status-text">Initialising…</span>
+  </div>
+
+  <div class="header-divider" aria-hidden="true"></div>
+  <div class="sort-badge-wrap">
+    <span class="sort-label">Sort</span>
+    <span id="sort-status" class="sort-badge">—</span>
+  </div>
+
+  <div class="header-divider" aria-hidden="true"></div>
+
+  <!-- Load button -->
+  <button id="load-btn" type="button" aria-label="Load a .ply model file">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="17 8 12 3 7 8"/>
+      <line x1="12" y1="3" x2="12" y2="15"/>
+    </svg>
+    Load Model
+  </button>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════
+     WELCOME / EMPTY STATE
+════════════════════════════════════════════════════════════ -->
+<div id="welcome-overlay" role="main">
+  <article class="welcome-card" aria-label="Welcome — load a model to begin">
+    <div class="welcome-icon" aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <ellipse cx="12" cy="12" rx="10" ry="4"/>
+        <path d="M2 12c0 4.418 4.477 8 10 8s10-3.582 10-8"/>
+        <path d="M2 12c0-4.418 4.477-8 10-8s10 3.582 10 8"/>
+        <line x1="12" y1="2" x2="12" y2="22"/>
+      </svg>
+    </div>
+
+    <h1 class="welcome-title">3D Gaussian Splat Viewer</h1>
+    <p class="welcome-desc">
+      Load a <code>.ply</code> Gaussian Splatting scene to begin exploring.
+      Supports large Mars Rover and Office environment captures.
+      You can also <strong>drag &amp; drop</strong> a file anywhere on the page.
+    </p>
+
+    <div class="welcome-chips" role="list" aria-label="Supported features">
+      <div class="chip" role="listitem">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
+        WebGL Renderer
+      </div>
+      <div class="chip" role="listitem">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        GPU Accelerated
+      </div>
+      <div class="chip" role="listitem">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        3DGS · PLY Format
+      </div>
+      <div class="chip" role="listitem">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        Intel Laptop Optimised
+      </div>
+    </div>
+
+    <button id="welcome-load-btn" class="welcome-load-btn" type="button" aria-label="Choose a .ply file from your computer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      Choose .ply File
+    </button>
+  </article>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     LOADING OVERLAY
+════════════════════════════════════════════════════════════ -->
+<div id="loading-overlay" role="dialog" aria-modal="true" aria-label="Loading model" aria-live="assertive">
+  <div class="loading-card">
+    <div class="loading-icon-ring" aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <ellipse cx="12" cy="12" rx="10" ry="4"/>
+        <path d="M2 12c0 4.418 4.477 8 10 8s10-3.582 10-8"/>
+        <line x1="12" y1="2" x2="12" y2="22"/>
+      </svg>
+    </div>
+
+    <h2 class="loading-title">Processing Scene</h2>
+    <p class="loading-subtitle">Decoding Gaussian splats and uploading to GPU…</p>
+    <div id="loading-filename" class="loading-filename">—</div>
+
+    <!-- Progress bar -->
+    <div class="progress-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Loading progress">
+      <div id="progress-bar" class="progress-bar"></div>
+    </div>
+    <div class="progress-labels">
+      <span id="progress-label">Reading file…</span>
+      <span id="progress-pct" class="progress-pct">0%</span>
+    </div>
+
+    <!-- Steps -->
+    <div class="progress-steps" role="list" aria-label="Loading steps">
+      <div id="step-read" class="progress-step" role="listitem">
+        <div class="step-dot" aria-hidden="true">1</div>
+        <span>Reading file from disk</span>
+      </div>
+      <div id="step-parse" class="progress-step" role="listitem">
+        <div class="step-dot" aria-hidden="true">2</div>
+        <span>Parsing PLY header &amp; properties</span>
+      </div>
+      <div id="step-upload" class="progress-step" role="listitem">
+        <div class="step-dot" aria-hidden="true">3</div>
+        <span>Uploading geometry to GPU buffers</span>
+      </div>
+      <div id="step-render" class="progress-step" role="listitem">
+        <div class="step-dot" aria-hidden="true">4</div>
+        <span>Initialising WebGL renderer</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     NAVIGATION CONTROLS PANEL (bottom-right)
+════════════════════════════════════════════════════════════ -->
+<aside id="controls-panel" class="panel" aria-label="Navigation controls reference">
+  <div class="panel-header">
+    <div class="panel-title">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M5.34 18.66l-1.41 1.41M19.07 19.07l-1.41-1.41M5.34 5.34L3.93 3.93M22 12h-2M4 12H2M12 22v-2M12 4V2"/>
+      </svg>
+      Navigation Controls
+    </div>
+  </div>
+  <div class="panel-body">
+    <div class="control-row">
+      <div class="control-icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-14 9V3z"/></svg>
+      </div>
+      <div class="control-info">
+        <div class="control-label">Left Click + Drag</div>
+        <div class="control-desc">Orbit / rotate the scene around the focus point</div>
+      </div>
+    </div>
+    <div class="control-row">
+      <div class="control-icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 9 2 12 5 15"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+      </div>
+      <div class="control-info">
+        <div class="control-label">Right Click + Drag</div>
+        <div class="control-desc">Pan the camera across the scene</div>
+      </div>
+    </div>
+    <div class="control-row">
+      <div class="control-icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/></svg>
+      </div>
+      <div class="control-info">
+        <div class="control-label">Scroll Wheel</div>
+        <div class="control-desc">Zoom in / out (dollies the camera)</div>
+      </div>
+    </div>
+    <div class="control-row">
+      <div class="control-icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18"/></svg>
+      </div>
+      <div class="control-info">
+        <div class="control-label">Two-finger Pinch</div>
+        <div class="control-desc">Zoom on touchscreen / trackpad</div>
+      </div>
+    </div>
+    <div class="control-row">
+      <div class="control-icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
+      <div class="control-info">
+        <div class="control-label">Drag &amp; Drop</div>
+        <div class="control-desc">Drop a .ply file anywhere to load it</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══════════════════════════════════════════════════════════
+     INFO PANEL (bottom-left)
+════════════════════════════════════════════════════════════ -->
+<aside id="info-panel" class="panel" aria-label="Scene information">
+  <div class="panel-header">
+    <div class="panel-title">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      Scene Info
+    </div>
+  </div>
+  <div class="panel-body">
+    <div class="info-row">
+      <span class="info-key">File</span>
+      <span id="info-file" class="info-val">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">Size</span>
+      <span id="info-size" class="info-val">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">Splats</span>
+      <span id="info-splats" class="info-val orange">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">Renderer</span>
+      <span class="info-val blue">WebGL</span>
+    </div>
+    <div class="info-row">
+      <span class="info-key">FPS</span>
+      <span id="info-fps" class="info-val green">—</span>
+    </div>
+  </div>
+</aside>
+
+<!-- ── Performance / Pruning Panel ──────────────────────── -->
+<div id="perf-panel" class="panel" aria-label="Performance settings">
+  <div class="panel-header">
+    <div class="panel-title">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      Performance
+    </div>
+  </div>
+  <div class="panel-body">
+    <div class="perf-row">
+      <span class="info-key">Max Splats</span>
+      <span id="max-splats-val" class="info-val orange">1,000,000</span>
+    </div>
+    <input id="max-splats-slider" type="range" min="100000" max="6000000" step="100000" value="1000000"
+           aria-label="Maximum number of splats to render" />
+    <div class="perf-hint">Reduce for smoother playback on Intel GPU</div>
+  </div>
+</div>
+
+<!-- ── Toast ──────────────────────────────────────────────── -->
+<div id="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     FOOTER
+════════════════════════════════════════════════════════════ -->
+<footer id="footer" role="contentinfo">
+  <div class="footer-left">
+    <span>WSO2 Research &amp; Innovation</span>
+    <span class="dot" aria-hidden="true"></span>
+    <span>3D Gaussian Splatting Evaluation Platform</span>
+    <span class="dot" aria-hidden="true"></span>
+    <span class="footer-accent">Evaluation &amp; Visualisation Lead: Suthail</span>
+  </div>
+  <div class="footer-right">
+    Powered by <span>antimatter15/splat</span> · WebGL
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>
